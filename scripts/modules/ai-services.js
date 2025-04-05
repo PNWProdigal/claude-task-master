@@ -36,10 +36,20 @@ function getPerplexityClient() {
     if (!process.env.PERPLEXITY_API_KEY) {
       throw new Error("PERPLEXITY_API_KEY environment variable is missing. Set it to use research-backed features.");
     }
+    
+    // Get the command being run to decide whether to show initialization message
+    const currentCommand = process.argv[2] || '';
+    const isSilentCommand = currentCommand === '' || currentCommand === '--help' || currentCommand === '-h';
+    
     perplexity = new OpenAI({
       apiKey: process.env.PERPLEXITY_API_KEY,
       baseURL: 'https://api.perplexity.ai',
     });
+    
+    // Only show initialization message for actual commands, not help screens
+    if (!isSilentCommand) {
+      console.log('ℹ️ Initialized Perplexity client with OpenAI compatibility layer');
+    }
   }
   return perplexity;
 }

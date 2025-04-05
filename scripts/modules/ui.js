@@ -1,6 +1,6 @@
 /**
  * ui.js
- * User interface functions for the Task Master CLI
+ * User interface functions for the TaskCraft AI CLI
  */
 
 import chalk from 'chalk';
@@ -18,12 +18,29 @@ import { findNextTask, analyzeTaskComplexity } from './task-manager.js';
 const coolGradient = gradient(['#00b4d8', '#0077b6', '#03045e']);
 const warmGradient = gradient(['#fb8b24', '#e36414', '#9a031e']);
 
+// Track if banner has been displayed
+let bannerDisplayed = false;
+
+/**
+ * Reset display state to allow showing banner and help again
+ */
+function resetDisplayState() {
+  bannerDisplayed = false;
+  helpDisplayed = false;
+}
+
 /**
  * Display a fancy banner for the CLI
+ * @param {boolean} force - Whether to force display even if already shown
  */
-function displayBanner() {
+function displayBanner(force = false) {
+  // Only display once unless forced
+  if (bannerDisplayed && !force) {
+    return;
+  }
+  
   console.clear();
-  const bannerText = figlet.textSync('Task Master', {
+  const bannerText = figlet.textSync('Task Craft AI', {
     font: 'Standard',
     horizontalLayout: 'default',
     verticalLayout: 'default'
@@ -32,7 +49,7 @@ function displayBanner() {
   console.log(coolGradient(bannerText));
   
   // Add creator credit line below the banner
-  console.log(chalk.dim('by ') + chalk.cyan.underline('https://x.com/eyaltoledano'));
+  console.log(chalk.dim('by ') + chalk.cyan.underline('AIraAction - Part of the AIra Productivity Suite'));
   
   // Read version directly from package.json
   let version = CONFIG.projectVersion; // Default fallback
@@ -52,6 +69,9 @@ function displayBanner() {
     borderStyle: 'round',
     borderColor: 'cyan'
   }));
+  
+  // Mark as displayed
+  bannerDisplayed = true;
 }
 
 /**
@@ -228,16 +248,26 @@ function formatDependenciesWithStatus(dependencies, allTasks, forConsole = false
   return formattedDeps.join(', ');
 }
 
+// Track if help has been displayed to prevent duplication
+let helpDisplayed = false;
+
 /**
  * Display a comprehensive help guide
+ * @param {boolean} skipBanner - Whether to skip the banner display
+ * @param {boolean} force - Whether to force displaying help even if already shown
  */
-function displayHelp() {
-  displayBanner();
+function displayHelp(skipBanner = false, force = false) {
+  // Only display help once unless forced
+  if (helpDisplayed && !force) {
+    return;
+  }
   
-  console.log(boxen(
-    chalk.white.bold('Task Master CLI'),
-    { padding: 1, borderColor: 'blue', borderStyle: 'round', margin: { top: 1, bottom: 1 } }
-  ));
+  if (!skipBanner) {
+    displayBanner();
+  }
+  
+  // Mark help as displayed
+  helpDisplayed = true;
   
   // Command categories
   const commandCategories = [
@@ -600,7 +630,7 @@ async function displayNextTask(tasksPath) {
     // Suggest expanding if no subtasks
     console.log(boxen(
       chalk.yellow('No subtasks found. Consider breaking down this task:') + '\n' +
-      chalk.white(`Run: ${chalk.cyan(`task-master expand --id=${nextTask.id}`)}`),
+      chalk.white(`Run: ${chalk.cyan(`taskcraft expand --id=${nextTask.id}`)}`),
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderColor: 'yellow', borderStyle: 'round', margin: { top: 1, bottom: 0 } }
     ));
   }
@@ -608,11 +638,11 @@ async function displayNextTask(tasksPath) {
   // Show action suggestions
   console.log(boxen(
     chalk.white.bold('Suggested Actions:') + '\n' +
-    `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`task-master set-status --id=${nextTask.id} --status=in-progress`)}\n` +
-    `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`task-master set-status --id=${nextTask.id} --status=done`)}\n` +
+    `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`taskcraft set-status --id=${nextTask.id} --status=in-progress`)}\n` +
+    `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`taskcraft set-status --id=${nextTask.id} --status=done`)}\n` +
     (nextTask.subtasks && nextTask.subtasks.length > 0 
-      ? `${chalk.cyan('3.')} Update subtask status: ${chalk.yellow(`task-master set-status --id=${nextTask.id}.1 --status=done`)}`
-      : `${chalk.cyan('3.')} Break down into subtasks: ${chalk.yellow(`task-master expand --id=${nextTask.id}`)}`),
+      ? `${chalk.cyan('3.')} Update subtask status: ${chalk.yellow(`taskcraft set-status --id=${nextTask.id}.1 --status=done`)}`
+      : `${chalk.cyan('3.')} Break down into subtasks: ${chalk.yellow(`taskcraft expand --id=${nextTask.id}`)}`),
     { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderColor: 'green', borderStyle: 'round', margin: { top: 1 } }
   ));
 }
@@ -680,9 +710,9 @@ async function displayTaskById(tasksPath, taskId) {
     // Show action suggestions for subtask
     console.log(boxen(
       chalk.white.bold('Suggested Actions:') + '\n' +
-      `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`task-master set-status --id=${task.parentTask.id}.${task.id} --status=in-progress`)}\n` +
-      `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`task-master set-status --id=${task.parentTask.id}.${task.id} --status=done`)}\n` +
-      `${chalk.cyan('3.')} View parent task: ${chalk.yellow(`task-master show --id=${task.parentTask.id}`)}`,
+      `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`taskcraft set-status --id=${task.parentTask.id}.${task.id} --status=in-progress`)}\n` +
+      `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`taskcraft set-status --id=${task.parentTask.id}.${task.id} --status=done`)}\n` +
+      `${chalk.cyan('3.')} View parent task: ${chalk.yellow(`taskcraft show --id=${task.parentTask.id}`)}`,
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderColor: 'green', borderStyle: 'round', margin: { top: 1 } }
     ));
     
@@ -846,7 +876,7 @@ async function displayTaskById(tasksPath, taskId) {
     // Suggest expanding if no subtasks
     console.log(boxen(
       chalk.yellow('No subtasks found. Consider breaking down this task:') + '\n' +
-      chalk.white(`Run: ${chalk.cyan(`task-master expand --id=${task.id}`)}`),
+      chalk.white(`Run: ${chalk.cyan(`taskcraft expand --id=${task.id}`)}`),
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderColor: 'yellow', borderStyle: 'round', margin: { top: 1, bottom: 0 } }
     ));
   }
@@ -854,11 +884,11 @@ async function displayTaskById(tasksPath, taskId) {
   // Show action suggestions
   console.log(boxen(
     chalk.white.bold('Suggested Actions:') + '\n' +
-    `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`task-master set-status --id=${task.id} --status=in-progress`)}\n` +
-    `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`task-master set-status --id=${task.id} --status=done`)}\n` +
+    `${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`taskcraft set-status --id=${task.id} --status=in-progress`)}\n` +
+    `${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`taskcraft set-status --id=${task.id} --status=done`)}\n` +
     (task.subtasks && task.subtasks.length > 0 
-      ? `${chalk.cyan('3.')} Update subtask status: ${chalk.yellow(`task-master set-status --id=${task.id}.1 --status=done`)}`
-      : `${chalk.cyan('3.')} Break down into subtasks: ${chalk.yellow(`task-master expand --id=${task.id}`)}`),
+      ? `${chalk.cyan('3.')} Update subtask status: ${chalk.yellow(`taskcraft set-status --id=${task.id}.1 --status=done`)}`
+      : `${chalk.cyan('3.')} Break down into subtasks: ${chalk.yellow(`taskcraft expand --id=${task.id}`)}`),
     { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderColor: 'green', borderStyle: 'round', margin: { top: 1 } }
   ));
 }
@@ -999,7 +1029,7 @@ async function displayComplexityReport(reportPath) {
 
   // When adding rows, don't truncate the expansion command
   tasksNeedingExpansion.forEach(task => {
-    const expansionCommand = `task-master expand --id=${task.taskId} --num=${task.recommendedSubtasks}${task.expansionPrompt ? ` --prompt="${task.expansionPrompt}"` : ''}`;
+    const expansionCommand = `taskcraft expand --id=${task.taskId} --num=${task.recommendedSubtasks}${task.expansionPrompt ? ` --prompt="${task.expansionPrompt}"` : ''}`;
     
     complexTable.push([
       task.taskId,
@@ -1045,9 +1075,9 @@ async function displayComplexityReport(reportPath) {
   // Show action suggestions
   console.log(boxen(
     chalk.white.bold('Suggested Actions:') + '\n\n' +
-    `${chalk.cyan('1.')} Expand all complex tasks: ${chalk.yellow(`task-master expand --all`)}\n` +
-    `${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`task-master expand --id=<id>`)}\n` +
-    `${chalk.cyan('3.')} Regenerate with research: ${chalk.yellow(`task-master analyze-complexity --research`)}`,
+    `${chalk.cyan('1.')} Expand all complex tasks: ${chalk.yellow(`taskcraft expand --all`)}\n` +
+    `${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`taskcraft expand --id=<id>`)}\n` +
+    `${chalk.cyan('3.')} Regenerate with research: ${chalk.yellow(`taskcraft analyze-complexity --research`)}`,
     { padding: 1, borderColor: 'cyan', borderStyle: 'round', margin: { top: 1 } }
   ));
 }
@@ -1065,4 +1095,5 @@ export {
   displayNextTask,
   displayTaskById,
   displayComplexityReport,
+  resetDisplayState,
 }; 

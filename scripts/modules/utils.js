@@ -48,6 +48,9 @@ function log(level, ...args) {
   }
 }
 
+// We'll import OptimizationAdapter dynamically to avoid circular references
+let optimizationAdapter = null;
+
 /**
  * Reads and parses a JSON file
  * @param {string} filepath - Path to the JSON file
@@ -55,7 +58,30 @@ function log(level, ...args) {
  */
 function readJSON(filepath) {
   try {
-    const rawData = fs.readFileSync(filepath, 'utf8');
+    // Lazy load the OptimizationAdapter if not already loaded
+    if (!optimizationAdapter) {
+      try {
+        // Try to import OptimizationAdapter
+        import('./optimization-adapter.js').then(module => {
+          optimizationAdapter = new module.OptimizationAdapter();
+          log('debug', 'OptimizationAdapter loaded dynamically');
+        }).catch(err => {
+          log('debug', 'Failed to load OptimizationAdapter:', err.message);
+        });
+      } catch (err) {
+        log('debug', 'OptimizationAdapter import error:', err.message);
+      }
+    }
+
+    // Use optimized reader if available, otherwise fall back to fs
+    let rawData;
+    if (optimizationAdapter) {
+      const optimizedReader = optimizationAdapter.createOptimizedReader(filepath);
+      rawData = optimizedReader('utf8');
+    } else {
+      rawData = fs.readFileSync(filepath, 'utf8');
+    }
+    
     return JSON.parse(rawData);
   } catch (error) {
     log('error', `Error reading JSON file ${filepath}:`, error.message);
@@ -73,7 +99,13 @@ function readJSON(filepath) {
  */
 function writeJSON(filepath, data) {
   try {
-    fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+    // Use optimized writer if available, otherwise fall back to fs
+    if (optimizationAdapter) {
+      const optimizedWriter = optimizationAdapter.createOptimizedWriter(filepath);
+      optimizedWriter(JSON.stringify(data, null, 2));
+    } else {
+      fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+    }
   } catch (error) {
     log('error', `Error writing JSON file ${filepath}:`, error.message);
     if (CONFIG.debug) {

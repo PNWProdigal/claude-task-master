@@ -53,21 +53,36 @@ const anthropic = new Anthropic({
 // Import perplexity if available
 let perplexity;
 
-try {
-  if (process.env.PERPLEXITY_API_KEY) {
-    // Using the existing approach from ai-services.js
-    const OpenAI = (await import('openai')).default;
-    
-    perplexity = new OpenAI({
-      apiKey: process.env.PERPLEXITY_API_KEY, 
-      baseURL: 'https://api.perplexity.ai',
-    });
-    
-    log('info', `Initialized Perplexity client with OpenAI compatibility layer`);
+// Lazy-load Perplexity only when needed
+async function getPerplexity() {
+  if (!perplexity) {
+    try {
+      if (process.env.PERPLEXITY_API_KEY) {
+        // Using the existing approach from ai-services.js
+        const OpenAI = (await import('openai')).default;
+        
+        perplexity = new OpenAI({
+          apiKey: process.env.PERPLEXITY_API_KEY, 
+          baseURL: 'https://api.perplexity.ai',
+        });
+        
+        // Get the command being run to decide whether to show initialization message
+        const currentCommand = process.argv[2] || '';
+        const isSilentCommand = currentCommand === '' || currentCommand === '--help' || currentCommand === '-h';
+        
+        if (!isSilentCommand) {
+          log('info', `Initialized Perplexity client with OpenAI compatibility layer`);
+        }
+      } else {
+        throw new Error("PERPLEXITY_API_KEY environment variable is missing");
+      }
+    } catch (error) {
+      log('warn', `Failed to initialize Perplexity client: ${error.message}`);
+      log('warn', 'Research-backed features will not be available');
+      return null;
+    }
   }
-} catch (error) {
-  log('warn', `Failed to initialize Perplexity client: ${error.message}`);
-  log('warn', 'Research-backed features will not be available');
+  return perplexity;
 }
 
 /**
@@ -1021,7 +1036,7 @@ function listTasks(tasksPath, statusFilter, withSubtasks = false) {
       }
       
       console.log(boxen(
-        chalk.hex('#FF8800').bold(`🔥 Next Task to Work On: #${nextTask.id} - ${nextTask.title}`) + '\n\n' +
+        chalk.hex('#FF8800').bold(`Next Task to Work On: #${nextTask.id} - ${nextTask.title}`) + '\n\n' +
         `${chalk.white('Priority:')} ${priorityColors[nextTask.priority || 'medium'](nextTask.priority || 'medium')}   ${chalk.white('Status:')} ${getStatusWithColor(nextTask.status, true)}\n` +
         `${chalk.white('Dependencies:')} ${nextTask.dependencies && nextTask.dependencies.length > 0 ? formatDependenciesWithStatus(nextTask.dependencies, data.tasks, true) : chalk.gray('None')}\n\n` +
         `${chalk.white('Description:')} ${nextTask.description}` +
@@ -1033,7 +1048,7 @@ function listTasks(tasksPath, statusFilter, withSubtasks = false) {
           borderColor: '#FF8800', 
           borderStyle: 'round', 
           margin: { top: 1, bottom: 1 },
-          title: '⚡ RECOMMENDED NEXT TASK ⚡',
+          title: '🚧 RECOMMENDED NEXT TASK 🚧',
           titleAlignment: 'center',
           width: terminalWidth - 4, // Use full terminal width minus a small margin
           fullscreen: false // Keep it expandable but not literally fullscreen
